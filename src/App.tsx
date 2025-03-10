@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, UserCircle } from 'lucide-react';
+import { ShoppingCart, UserCircle, LayoutDashboard } from 'lucide-react';
 import { ProductCard } from './components/ProductCard';
 import { Cart } from './components/Cart';
 import { AuthModal } from './components/AuthModal';
+import { AdminDashboard } from './components/AdminDashboard';
 import { Product, CartItem, User } from './types';
 import { supabase } from './lib/supabase';
 
@@ -15,13 +16,21 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
   useEffect(() => {
     fetchProducts();
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+        setIsAdmin(session.user.app_metadata?.is_admin ?? false);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -29,7 +38,10 @@ function App() {
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
+    if (user) {
+      setUser(user);
+      setIsAdmin(user.app_metadata?.is_admin ?? false);
+    }
   }
 
   async function fetchProducts() {
@@ -40,7 +52,6 @@ function App() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-
       setProducts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch products');
@@ -52,7 +63,9 @@ function App() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setIsAdmin(false);
     setCartItems([]);
+    setShowAdminDashboard(false);
   };
 
   const addToCart = (product: Product) => {
@@ -104,8 +117,26 @@ function App() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Simple Shop</h1>
+          <button 
+            onClick={() => {
+              setShowAdminDashboard(false);
+            }}
+            className="text-2xl font-bold text-gray-900 hover:text-gray-700 transition-colors"
+          >
+            Simple Shop
+          </button>
           <div className="flex items-center gap-4">
+            {isAdmin && (
+              <button
+                onClick={() => setShowAdminDashboard(!showAdminDashboard)}
+                className={`relative p-2 rounded-full transition-colors ${
+                  showAdminDashboard ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'
+                }`}
+                title="Admin Dashboard"
+              >
+                <LayoutDashboard size={24} />
+              </button>
+            )}
             <button
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 hover:bg-gray-100 rounded-full"
@@ -121,6 +152,11 @@ function App() {
               <div className="flex items-center gap-2">
                 <UserCircle size={24} />
                 <span className="text-sm text-gray-600">{user.email}</span>
+                {isAdmin && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    Admin
+                  </span>
+                )}
                 <button
                   onClick={handleSignOut}
                   className="text-sm text-red-600 hover:text-red-500"
@@ -142,20 +178,24 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
+        {showAdminDashboard && isAdmin ? (
+          <AdminDashboard />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {products.map(product => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onAddToCart={addToCart}
-              />
-            ))}
-          </div>
+          loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {products.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={addToCart}
+                />
+              ))}
+            </div>
+          )
         )}
       </main>
 

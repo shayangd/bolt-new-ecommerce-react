@@ -16,6 +16,7 @@ interface ValidationErrors {
 export function AuthForm({ mode, onSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -54,6 +55,11 @@ export function AuthForm({ mode, onSuccess }: AuthFormProps) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              is_admin: isAdmin
+            }
+          }
         });
         if (error) throw error;
         onSuccess();
@@ -132,6 +138,21 @@ export function AuthForm({ mode, onSuccess }: AuthFormProps) {
           </p>
         )}
       </div>
+
+      {mode === 'register' && (
+        <div className="flex items-center">
+          <input
+            id="isAdmin"
+            type="checkbox"
+            checked={isAdmin}
+            onChange={(e) => setIsAdmin(e.target.checked)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label htmlFor="isAdmin" className="ml-2 block text-sm text-gray-900">
+            Register as admin user
+          </label>
+        </div>
+      )}
 
       <button
         type="submit"
