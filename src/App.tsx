@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, UserCircle, LayoutDashboard } from 'lucide-react';
-import { ProductCard } from './components/ProductCard';
 import { Cart } from './components/Cart';
 import { AuthModal } from './components/AuthModal';
 import { AdminDashboard } from './components/AdminDashboard';
+import { Header } from './components/Header';
+import { SideMenu } from './components/SideMenu';
+import { HomePage } from './pages/HomePage';
+import { AboutPage } from './pages/AboutPage';
 import { Product, CartItem, User } from './types';
 import { supabase } from './lib/supabase';
 
@@ -18,6 +20,8 @@ function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<'home' | 'about'>('home');
 
   useEffect(() => {
     fetchProducts();
@@ -104,6 +108,20 @@ function App() {
 
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  const renderMainContent = () => {
+    if (showAdminDashboard && isAdmin) {
+      return <AdminDashboard />;
+    }
+
+    return activeSection === 'about' 
+      ? <AboutPage /> 
+      : <HomePage 
+          products={products} 
+          loading={loading} 
+          onAddToCart={addToCart} 
+        />;
+  };
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -114,92 +132,37 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <button 
-            onClick={() => {
-              setShowAdminDashboard(false);
-            }}
-            className="text-2xl font-bold text-gray-900 hover:text-gray-700 transition-colors"
-          >
-            Simple Shop
-          </button>
-          <div className="flex items-center gap-4">
-            {isAdmin && (
-              <button
-                onClick={() => setShowAdminDashboard(!showAdminDashboard)}
-                className={`relative p-2 rounded-full transition-colors ${
-                  showAdminDashboard ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'
-                }`}
-                title="Admin Dashboard"
-              >
-                <LayoutDashboard size={24} />
-              </button>
-            )}
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2 hover:bg-gray-100 rounded-full"
-            >
-              <ShoppingCart size={24} />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </button>
-            {user ? (
-              <div className="flex items-center gap-2">
-                <UserCircle size={24} />
-                <span className="text-sm text-gray-600">{user.email}</span>
-                {isAdmin && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    Admin
-                  </span>
-                )}
-                <button
-                  onClick={handleSignOut}
-                  className="text-sm text-red-600 hover:text-red-500"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="text-sm text-blue-600 hover:text-blue-500"
-              >
-                Sign In
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+      <Header
+        user={user}
+        isAdmin={isAdmin}
+        showAdminDashboard={showAdminDashboard}
+        totalItems={totalItems}
+        isSideMenuOpen={isSideMenuOpen}
+        onToggleSideMenu={() => setIsSideMenuOpen(!isSideMenuOpen)}
+        onLogoClick={() => {
+          setShowAdminDashboard(false);
+          setActiveSection('home');
+        }}
+        onToggleAdminDashboard={() => setShowAdminDashboard(!showAdminDashboard)}
+        onOpenCart={() => setIsCartOpen(true)}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onSignOut={handleSignOut}
+      />
 
-      {/* Main Content */}
+      <SideMenu
+        isOpen={isSideMenuOpen}
+        activeSection={activeSection}
+        onSectionChange={section => {
+          setActiveSection(section);
+          setShowAdminDashboard(false);
+        }}
+        onClose={() => setIsSideMenuOpen(false)}
+      />
+
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {showAdminDashboard && isAdmin ? (
-          <AdminDashboard />
-        ) : (
-          loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {products.map(product => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={addToCart}
-                />
-              ))}
-            </div>
-          )
-        )}
+        {renderMainContent()}
       </main>
 
-      {/* Cart */}
       <Cart
         items={cartItems}
         onUpdateQuantity={updateQuantity}
@@ -208,7 +171,6 @@ function App() {
         onClose={() => setIsCartOpen(false)}
       />
 
-      {/* Auth Modal */}
       {isAuthModalOpen && (
         <AuthModal
           mode={authMode}

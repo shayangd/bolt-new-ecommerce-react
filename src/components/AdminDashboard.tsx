@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Package, Info, Loader2, DollarSign } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Product, ProductFormData } from '../types';
-import { ProductForm } from './ProductForm';
+import { AdminProductManagement } from './AdminProductManagement';
+import { AdminAbout } from './AdminAbout';
+import { AdminOrderRevenue } from './AdminOrderRevenue';
 
 export function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [activeTab, setActiveTab] = useState<'products' | 'about' | 'revenue'>('products');
 
   useEffect(() => {
     fetchProducts();
@@ -31,7 +32,7 @@ export function AdminDashboard() {
     }
   }
 
-  const handleSubmit = async (formData: ProductFormData) => {
+  const handleSubmit = async (formData: ProductFormData, editingProduct: Product | null) => {
     try {
       setLoading(true);
       if (editingProduct) {
@@ -55,8 +56,6 @@ export function AdminDashboard() {
         if (error) throw error;
       }
       await fetchProducts();
-      setIsFormOpen(false);
-      setEditingProduct(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save product');
     } finally {
@@ -92,110 +91,66 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
-        <button
-          onClick={() => {
-            setEditingProduct(null);
-            setIsFormOpen(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-        >
-          <Plus size={20} />
-          Add Product
-        </button>
+    <div className="space-y-6">
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-medium text-sm ${
+              activeTab === 'products'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Package size={20} />
+            Product Management
+          </button>
+          <button
+            onClick={() => setActiveTab('revenue')}
+            className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-medium text-sm ${
+              activeTab === 'revenue'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <DollarSign size={20} />
+            Order Revenue
+          </button>
+          <button
+            onClick={() => setActiveTab('about')}
+            className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-medium text-sm ${
+              activeTab === 'about'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Info size={20} />
+            About Us
+          </button>
+        </nav>
       </div>
 
+      {/* Error Message */}
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
           {error}
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Image
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Price
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {products.map((product) => (
-              <tr key={product.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="h-16 w-16 object-cover rounded"
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    {product.name}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {product.description.substring(0, 50)}...
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    ${Number(product.price).toFixed(2)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    {product.category}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingProduct(product);
-                        setIsFormOpen(true);
-                      }}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      <Pencil size={20} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {isFormOpen && (
-        <ProductForm
-          product={editingProduct}
+      {/* Content */}
+      {activeTab === 'products' ? (
+        <AdminProductManagement
+          products={products}
+          loading={loading}
+          error={error}
           onSubmit={handleSubmit}
-          onClose={() => {
-            setIsFormOpen(false);
-            setEditingProduct(null);
-          }}
+          onDelete={handleDelete}
         />
+      ) : activeTab === 'revenue' ? (
+        <AdminOrderRevenue />
+      ) : (
+        <AdminAbout />
       )}
     </div>
   );

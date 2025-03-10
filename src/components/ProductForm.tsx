@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Product, ProductFormData } from '../types';
-
-interface ProductFormProps {
-  product?: Product | null;
-  onSubmit: (data: ProductFormData) => Promise<void>;
-  onClose: () => void;
-}
+import { ProductFormData } from '../types';
+import { ProductFormProps } from '../props/AdminProps';
 
 export function ProductForm({ product, onSubmit, onClose }: ProductFormProps) {
   const [formData, setFormData] = useState<ProductFormData>({
@@ -19,7 +14,6 @@ export function ProductForm({ product, onSubmit, onClose }: ProductFormProps) {
 
   useEffect(() => {
     if (product) {
-      // Ensure price is properly converted to number
       setFormData({
         ...product,
         price: Number(product.price)
@@ -29,7 +23,6 @@ export function ProductForm({ product, onSubmit, onClose }: ProductFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Ensure price is a number before submission
     const submissionData = {
       ...formData,
       price: Number(formData.price)
